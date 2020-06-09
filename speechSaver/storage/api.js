@@ -16,7 +16,7 @@ var cos = new ibm.S3(config);
 // filename will be "key"
 // 사용 예시 : await upload(newBucketName, newLargeFileName, buffer)
 //
-exports.upload = async (bucketName, fileName, fileBuffer) => {
+exports.upload = async (fileName, fileBuffer, bucketName = constants.defaultBucketName) => {
 
 	if (fileBuffer == null) {
 		throw new Error("file Buffer is empty!")
@@ -42,6 +42,7 @@ exports.upload = async (bucketName, fileName, fileBuffer) => {
 		)
 
 	} catch (error) {
+		console.log("storage throw error", error.message)
 		throw error
 	}
 

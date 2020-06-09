@@ -17,3 +17,7 @@ exports.serviceInstanceId= process.env.COS_SERVICE_CRN
 exports.defaultBucketName = process.env.BUCKET_ONE
 
 exports.splitSizeUnit = 1024 * 1024 * 5
+
+// Watson
+exports.watsonApiKey = process.env.WATSON_API_KEY
+exports.watsonInstanceUrl = process.env.WATSON_URL
