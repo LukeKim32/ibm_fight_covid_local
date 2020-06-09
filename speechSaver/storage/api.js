@@ -2,22 +2,21 @@
 
 // Required libraries
 const ibm = require('ibm-cos-sdk');
-const fs = require('fs')
-require('dotenv').config();
+const constants = require('../tools/constants')
 
 const config = {
-	endpoint: process.env.COS_ENDPOINT,
-	apiKeyId: process.env.COS_API_KEY_ID,
-	ibmAuthEndpoint: process.env.COS_AUTH_ENDPOINT,
-	serviceInstanceId: process.env.COS_SERVICE_CRN,
+	endpoint: constants.endpoint,
+	apiKeyId: constants.apiKeyId,
+	ibmAuthEndpoint: constants.ibmAuthEndpoint,
+	serviceInstanceId: constants.serviceInstanceId,
 };
 
 var cos = new ibm.S3(config);
 
 // filename will be "key"
-// 사용 예시 : await uploadVoice(newBucketName, newLargeFileName, buffer)
+// 사용 예시 : await upload(newBucketName, newLargeFileName, buffer)
 //
-module.exports.upload = async (bucketName, fileName, fileBuffer) => {
+exports.upload = async (bucketName, fileName, fileBuffer) => {
 
 	if (fileBuffer == null) {
 		throw new Error("file Buffer is empty!")
@@ -30,8 +29,9 @@ module.exports.upload = async (bucketName, fileName, fileBuffer) => {
 			Key: fileName
 		}
 
-		const uploadRequestInfo = await cos.createMultipartUpload(uploadInfo)
-																				.promise()
+		const uploadRequestInfo = await cos.createMultipartUpload(
+			uploadInfo
+		).promise()
 
 		uploadInfo.UploadId = uploadRequestInfo.UploadId
 
@@ -48,16 +48,18 @@ module.exports.upload = async (bucketName, fileName, fileBuffer) => {
 }
 
 // Retrieve the list of contents for a bucket
-module.exports.getBucketContents = async (bucketName) => {
+exports.getBucketContents = async (bucketName) => {
 
 	try {
 
-		console.log(`Retrieving bucket contents from: ${bucketName}`);
+		console.log(
+			`Retrieving bucket contents from: ${bucketName}`
+		);
 
 		const bucketInfo = { Bucket: bucketName }
 
 		const data = await cos.listObjects(bucketInfo)
-														.promise()
+			.promise()
 
 		return data.Contents
 
@@ -67,7 +69,7 @@ module.exports.getBucketContents = async (bucketName) => {
 }
 
 // Retrieve a particular item from the bucket
-module.exports.getItem = async (bucketName, itemName) => {
+exports.getItem = async (bucketName, itemName) => {
 
 	try {
 
@@ -77,7 +79,7 @@ module.exports.getItem = async (bucketName, itemName) => {
 		}
 
 		const data = await cos.getObject(objectInfo)
-														.promise()
+			.promise()
 
 		if (data) {
 			return Buffer.from(data.Body)
@@ -90,8 +92,8 @@ module.exports.getItem = async (bucketName, itemName) => {
 
 
 // Delete item
-module.exports.deleteItem = async (bucketName, itemName) => {
-	
+exports.deleteItem = async (bucketName, itemName) => {
+
 	try {
 
 		console.log(`Deleting item: ${itemName}`);
@@ -102,7 +104,7 @@ module.exports.deleteItem = async (bucketName, itemName) => {
 		}
 
 		await cos.deleteObject(objectInfo)
-							.promise()
+			.promise()
 
 		console.log(itemName, "삭제 성공")
 
@@ -124,7 +126,7 @@ const splitFileSize = async (fileLength, splitUnit) => {
 		fractions.push({
 			start: i * splitUnit,
 			end: Math.min(
-				i * splitUnit + splitUnit, 
+				i * splitUnit + splitUnit,
 				fileLength
 			)
 		})
@@ -138,17 +140,15 @@ const startMultiPartUpload = async (uploadInfo, fileBuffer) => {
 
 	try {
 
-		const splitSizeUnit = 1024 * 1024 * 5
-
 		const fractions = await splitFileSize(
 			fileBuffer.length,
-			splitSizeUnit
+			constants.splitSizeUnit
 		)
 
 		const uploadedDataResults = await Promise.all(
 
 			fractions.map((eachFileSize, idx) => {
-				
+
 				return cos.uploadPart({
 					Body: fileBuffer.slice(
 						eachFileSize.start,
@@ -164,10 +164,11 @@ const startMultiPartUpload = async (uploadInfo, fileBuffer) => {
 		await cos.completeMultipartUpload({
 			...uploadInfo,
 			MultipartUpload: {
-				Parts: uploadedDataResults.map((result, idx) => {
-					result.PartNumber = idx + 1
-					return result
-				})
+				Parts: uploadedDataResults.map(
+					(result, idx) => {
+						result.PartNumber = idx + 1
+						return result
+					})
 			},
 		}).promise()
 
@@ -186,7 +187,9 @@ const cancelMultiPartUpload = async (uploadInfo) => {
 
 		await cos.abortMultipartUpload(uploadInfo).promise()
 
-		console.log(`Multi-part upload aborted for ${uploadInfo.Key}`);
+		console.log(
+			`Multi-part upload aborted for ${uploadInfo.Key}`
+		);
 
 	} catch (e) {
 		console.log(
