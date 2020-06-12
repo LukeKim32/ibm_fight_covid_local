@@ -10,36 +10,35 @@ exports.saveSpeechFile = async (req, res) => {
 		var db = dbClient.getCollection(region + '-news')
 
 		const newNewsData = {
-			text: req.body.text,
+			title : req.body.title,
+			content: req.body.content,
 			region: region,
 			type: "info", // warning, etc
 			createdTime: Date.now()
 		}
 
-		await db.insertOne(newNewsData)
+		const insertedResult = await db.insertOne(newNewsData)
+		const assignedId = insertedResult.ops[0]._id
 
 		const voiceData = await watsonClient.convertToVoice(
-			req.body.text, 
+			req.body.content,
 			region
 		)
 
-		const fileName = makeFileName(newNewsData)
+		const fileName = makeFileName(
+			assignedId,
+			newNewsData
+		)
 
 		await storage.upload(fileName, voiceData)
 
-		const newVoiceFileMetaData = {
-			key: key,
-			region: region,
-			type: "info",
-			createdTime: Date.now()
-		}
-
-		db = dbClient.getCollection(region + "-voice")
-
-		await db.insertOne(newVoiceFileMetaData)
+		await db.updateOne(
+			{ _id : assignedId }, 
+			{$set: {fileName: fileName}}
+		)
 
 		res.statusCode = 200;
-		res.end("음성파일 생성 성공")
+		res.end(fileName)
 
 	} catch (err) {
 
@@ -49,6 +48,6 @@ exports.saveSpeechFile = async (req, res) => {
 	}
 }
 
-const makeFileName = (newsData) => {
-	return `${newsData.region}-${newsData.type}-${newsData.createdTime}.wav`
+const makeFileName = (id, newsData) => {
+	return `${id}-${newsData.region}-${newsData.type}.wav`
 }
